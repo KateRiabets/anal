@@ -29,7 +29,7 @@ def parseToken(expected_lexeme, expected_token, error_message=None):
         return True
     else:
         if error_message:
-            failParse(error_message, (numLine, lex, tok))
+            failParse(error_message, (numLine, lex, tok) )
         else:
             failParse("Token mismatch", (numLine, lex, tok, expected_lexeme, expected_token))
         return False
@@ -124,11 +124,12 @@ def parseIdentList():
 
 #rabotaet-----------
 
-
 def parseStatementList():
-    global numRow
     print("Parsing Statement List...")
-    while numRow <= len_tableOfSymb:
+    while True:
+        numLine, lex, tok = getSymb()
+        if lex is None or lex == "}":
+            break
         parseStatement()
 
 def parseStatement():
@@ -141,14 +142,33 @@ def parseStatement():
                 numRow + 2] if numRow + 2 <= len_tableOfSymb else (None, None, None, None)
             if next_next_lex == "readLine":
                 parseInp()
+                return True
             else:
                 parseAssign()
+                return True
         else:
             failParse("Unexpected token after identifier", (next_numLine, next_lex, next_tok))
     elif lex == 'println':
         parseOut()
-    if lex == 'for':
+        return True
+    elif lex == 'for':
         parseForStatement()
+        return True
+    elif lex == 'while':
+        parseWhileStatement()
+        return True
+    elif lex == 'do':
+        parseDoWhileStatement()
+        return True
+    elif lex == 'if':
+        parseIfStatement()
+        return True
+    elif lex == 'switch':
+        parseSwitchStatement()
+        return True
+    elif lex == 'break':
+        parseBreak()
+        return True
     else:
         failParse("Unexpected token in Statement", (numLine, lex, tok))
         return False
@@ -357,16 +377,16 @@ def parseInp():
 def parseForStatement():
     print("Parsing For Statement...")
     parseToken('for', "keyword")
-    parseToken('(', 'bracket')
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'for'")
     parseInit()
-    parseToken(';', 'punct')
+    parseToken(';', 'punct', "Expected ';'")
     parseBoolExpr()
-    parseToken(';', 'punct')
+    parseToken(';', 'punct', "Expected ';'")
     parseUpdate()
-    parseToken(')', 'bracket')
-    parseToken('{', 'brace')
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
+    parseToken('{', 'brace', "Expected opening brace '{'")
     parseStatementList()
-    parseToken('}', 'brace')
+    parseToken('}', 'brace', "Expected closing brace '}' ")
     return True
 
 def parseInit():
@@ -381,6 +401,108 @@ def parseUpdate():
     parseIdent()
     parseAssignOp()
     parseArithmExpression()
+    return True
+#---------------------------------------------
+def parseWhileStatement():
+    print("Parsing While Statement...")
+    parseToken('while', "keyword")
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'while'")
+    parseBoolExpr()
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
+    parseToken('{', 'brace', "Expected opening brace '{'")
+    parseStatementList()
+    parseToken('}', 'brace', "Expected closing brace '}' ")
+    return True
+
+#---------------------------------------------
+def parseDoWhileStatement():
+    print("Parsing Do-While Statement...")
+    parseToken('do', "keyword")
+    parseToken('{', 'brace',"Expected opening bracket '(' after 'do'")
+    parseStatementList()
+    parseToken('}', 'brace', "Expected closing brace '}'")
+    parseToken('while', "keyword")
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'while'")
+    parseBoolExpr()
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
+    return True
+
+#---------------------------------------------
+def parseIfStatement():
+    print("Parsing If Statement...")
+    parseToken('if', "keyword")
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'if'")
+    parseBoolExpr()
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
+    parseToken('{', 'brace')
+    parseStatementList()
+    parseToken('}', 'brace', "Expected closing brace '}'")
+
+    # Проверка на наличие опциональной части 'else'
+    numLine, lex, tok = getSymb()
+    if lex == 'else':
+        parseToken('else', "keyword")
+        parseToken('{', 'brace')
+        parseStatementList()
+        parseToken('}', 'brace')
+    return True
+
+#---------------------------------------------
+def parseSwitchStatement():
+    print("Parsing Switch Statement...")
+    parseToken('switch', "keyword")
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'switch'")
+    parseExpression()
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
+    parseToken('{', 'brace')
+    parseCaseList()
+
+    # Проверка на наличие опциональной части 'default'
+    numLine, lex, tok = getSymb()
+    if lex == 'default':
+        parseDefaultCase()
+
+    parseToken('}', 'brace')
+    return True
+
+
+def parseCaseList():
+    print("Parsing Case List...")
+    while True:
+        numLine, lex, tok = getSymb()
+        if lex == 'case':
+            parseCaseStatement()
+        elif lex == 'default':
+            parseDefaultCase()
+            break
+        else:
+            break
+
+
+
+def parseCaseStatement():
+    print("Parsing Case Statement...")
+    parseToken('case', "keyword")
+    parseExpression()
+    parseToken(':', 'punct')
+    while True:
+        numLine, lex, tok = getSymb()
+        if lex in ['case', 'default', '}']:
+            break
+        parseStatement()
+
+
+
+def parseDefaultCase():
+    print("Parsing Default Case...")
+    parseToken('default', "keyword")
+    parseToken(':', 'punct')
+    parseStatementList()
+    return True
+
+def parseBreak():
+    print("Parsing Break Statement...")
+    parseToken('break', "keyword")
     return True
 
 parseProgram()
