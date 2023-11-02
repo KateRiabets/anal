@@ -1,54 +1,49 @@
 from lex import lex
 from lex import tableOfSymb
 
-lex()
+lex()   # Викликаємо функцію лексичного аналізу
 print('-'*30)
 print('tableOfSymb:{0}'.format(tableOfSymb))
 print('-'*30)
 
-numRow = 1
-len_tableOfSymb = len(tableOfSymb)
+numRow = 1  # Викликаємо функцію лексичного аналізу
+len_tableOfSymb = len(tableOfSymb)  # Обчислюємо довжину таблиці символів
 print(('len_tableOfSymb', len_tableOfSymb))
 
-def failParse(message, details):
-    print(f"Parser ERROR: {message} - {details}")
-    exit(1)
+# Функція для виведення повідомлення про помилку та завершення програми з вказаним кодом помилки
+def failParse(message, details, error_code=1):
+    numLine, lex, tok = details
+    print(f"Parser ERROR in line {numLine-1}: {message} - Current token: ({lex}, {tok})")
+    exit(error_code)
+
 
 def getSymb():
     global numRow
-    if numRow > len_tableOfSymb:
+    if numRow > len_tableOfSymb:  # Якщо досягли кінця таблиці символів, повертаємо None для всіх значень
         return None, None, None
-    numLine, lexeme, token, _ = tableOfSymb[numRow]
+    numLine, lexeme, token, _ = tableOfSymb[numRow] # Інакше повертаємо поточний символ
     return numLine, lexeme, token
 
+# Функція для аналізу токенів. Перевіряє, чи відповідає поточний токен очікуваному.
 def parseToken(expected_lexeme, expected_token, error_message=None):
     global numRow
-    numLine, lex, tok = getSymb()
-    if (lex, tok) == (expected_lexeme, expected_token):
-        numRow += 1
+    numLine, lex, tok = getSymb()   # Отримуємо поточний символ
+    if (lex, tok) == (expected_lexeme, expected_token):# Якщо поточний символ відповідає очікуваному
+        numRow += 1 #збільшуємо лічильник рядка
         return True
-    else:
-        if error_message:
+    else: # Інакше використовуємо загальне повідомлення про невідповідність токенів
+        if error_message:# Якщо є конкретне повідомлення про помилку, використовуємо його
             failParse(error_message, (numLine, lex, tok) )
         else:
             failParse("Token mismatch", (numLine, lex, tok, expected_lexeme, expected_token))
         return False
 
-# def parseProgram():
-#     global numRow
-#     print("Parsing Program...")
-#     parseDeclarList()
-#     while numRow <= len_tableOfSymb:
-#         parseStatement()
-#     if numRow != len_tableOfSymb + 1:
-#         failParse("Unexpected tokens at the end of the program", numRow)
-#     print("Parser: Syntax analysis completed successfully")
-#     return True
+
 def parseProgram():
     print("Parsing Program...")
-    parseDeclarList()
-    parseStatementList()
-    print("Parser: Syntax analysis completed successfully")
+    parseDeclarList()  # Аналізуємо список оголошень
+    parseStatementList() # Аналізуємо список інструкцій
+    print("Parser: Syntax analysis completed successfully") # Повідомлення про успішне завершення аналізу
     return True
 
 
@@ -59,83 +54,91 @@ def parseDeclarList():
     while True:
         if not parseDeclaration():
             break
+        numLine, lex, tok = getSymb()
+        if lex == ";":  # Якщо крапка з комою
+            parseSeparator()  # Аналіз роздільника
     return True
 
-def parseDeclaration():
-    print("Parsing Declaration...")
+def parseSeparator():
+    global numRow
     numLine, lex, tok = getSymb()
-    if lex is None:
-        return False
-    if lex in ("int", "double", "boolean"):
-        parseType()
-        parseIdentList()
+    print(f"Parsing Separator: {lex, tok}...")
+    if lex == ";":
+        numRow += 1
         return True
-    # elif lex.startswith("//"):  # предполагая, что комментарии начинаются с '//'
-    #     parseComment()
-    #     return True
+    else:
+        failParse("Expected separator ';'", (numLine, lex, tok), error_code=12)
+        return False
+
+
+def parseDeclaration():# Функція для аналізу окремого оголошення
+    print("Parsing Declaration...")
+    numLine, lex, tok = getSymb() # Отримуємо поточний символ
+    if lex is None:             # Якщо символ відсутній, завершуємо аналіз
+        return False
+    if lex in ("int", "double", "boolean"):# Перевіряємо, чи є поточний символ типом даних
+        parseType()                         # Аналізуємо тип даних
+        parseIdentList()            # Аналізуємо список ідентифікаторів
+        return True
     else:
         return False
 
-
+# Функція для аналізу типу даних
 def parseType():
     global numRow
-    numLine, lex, tok = getSymb()
-    print(f"Parsing Type: {lex, tok}...")
-    if lex in ("int", "double", "boolean"):
+    numLine, lex, tok = getSymb() # Отримуємо поточний символ
+    print(f"Parsing Type: {lex, tok}...") # Повідомлення про початок аналізу типу даних
+    if lex in ("int", "double", "boolean"): # Перевіряємо, чи є поточний символ типом даних
         numRow += 1
         return True
-    else:
-        failParse("Unexpected token in Type", (numLine, lex, tok))
+    else: # Якщо поточний символ не є типом даних, виводимо повідомлення про помилку
+        failParse("Unexpected token in Type", (numLine, lex, tok), error_code=2)
         return False
 
+# Функція для аналізу списку ідентифікаторів
 def parseIdentList():
-
     global numRow
-    numLine, lex, tok = getSymb()
+    numLine, lex, tok = getSymb()# Отримуємо поточний символ
     print(f"Parsing Identifier List: {lex, tok}...")
-    if tok == "ident":
+    if tok == "ident":  # Перевіряємо, чи є поточний символ ідентифікатором
         numRow += 1
         while True:
-            numLine, lex, tok = getSymb()
-            if lex == ",":
+            numLine, lex, tok = getSymb()  # Отримуємо наступний символ
+            if lex == ",":                  # Якщо це кома, аналізуємо наступний ідентифікатор
                 numRow += 1
                 numLine, lex, tok = getSymb()
                 if tok == "ident":
                     numRow += 1
-                else:
-                    failParse("Expected identifier after comma", (numLine, lex, tok))
+                else: # Якщо після коми відсутній ідентифікатор, виводимо повідомлення про помилку
+                    failParse("Expected identifier after comma", (numLine, lex, tok), error_code=3)
                     return False
             else:
                 break
         return True
-    else:
-        failParse("Expected identifier in IdentList", (numLine, lex, tok))
+    else: # Якщо поточний символ не є ідентифікатором, виводимо повідомлення про помилку
+        failParse("Expected identifier in IdentList", (numLine, lex, tok), error_code=4)
         return False
 
-# def parseComment():
-#     global numRow
-#     numLine, lex, tok = getSymb()
-#     if lex.startswith("//"):
-#         numRow += 1
-#         return True
-#     else:
-#         failParse("Expected comment", (numLine, lex, tok))
-#         return False
-
 #rabotaet-----------
+
 
 def parseStatementList():
     print("Parsing Statement List...")
     while True:
-        numLine, lex, tok = getSymb()
-        if lex is None or lex == "}":
+        if not parseStatement():
             break
-        parseStatement()
+        numLine, lex, tok = getSymb() # Отримуємо поточний символ
+        if lex == ";":  # Якщо крапка з комою
+            parseSeparator()  # Аналіз роздільника
+        if lex is None or lex == "}":  # Якщо символ відсутній або це закриваюча дужка, завершуємо аналіз
+            break
+    return True
 
 def parseStatement():
-    numLine, lex, tok = getSymb()
+    numLine, lex, tok = getSymb() # Отримуємо поточний символ
     print(f"Parsing Statement: {lex, tok}...")
-    if tok == "ident":  # начало инструкции присваивания
+    # Перевіряємо тип інструкції та аналізуємо її
+    if tok == "ident":
         next_numLine, next_lex, next_tok, _ = tableOfSymb[numRow + 1] if numRow + 1 <= len_tableOfSymb else (None, None, None, None)
         if next_lex == "=":
             next_next_numLine, next_next_lex, next_next_tok, _ = tableOfSymb[
@@ -147,7 +150,7 @@ def parseStatement():
                 parseAssign()
                 return True
         else:
-            failParse("Unexpected token after identifier", (next_numLine, next_lex, next_tok))
+            failParse("Unexpected token after identifier", (next_numLine, next_lex, next_tok), error_code=5)
     elif lex == 'println':
         parseOut()
         return True
@@ -175,36 +178,26 @@ def parseStatement():
 
 def parseAssign():
     print("Parsing Assign Statement...")
-    parseIdent()
-    parseToken("=", "assign_op")
-    parseExpression()
+    parseIdent() # Аналізуємо ідентифікатор
+    parseToken("=", "assign_op", "Expected assignment operator '=' after identifier") # Перевіряємо наявність оператора присвоєння
+    parseExpression() # Аналізуємо вираз
 
 def parseIdent():
     global numRow
-    numLine, lex, tok = getSymb()
+    numLine, lex, tok = getSymb() # Отримуємо поточний символ
     print(f"Parsing Identifier: {lex, tok}...")
-    if tok == "ident":
+    if tok == "ident": # Перевіряємо, чи є поточний символ ідентифікатором
         numRow += 1
         return True
-    else:
-        failParse("Expected identifier", (numLine, lex, tok))
+    else: # Якщо поточний символ не є ідентифікатором, виводимо повідомлення про помилку
+        failParse("Expected identifier", (numLine, lex, tok), error_code=6)
         return False
 
-def parseAssignOp():
-    global numRow
-    numLine, lex, tok = getSymb()
-    print(f"Parsing AssignOp: {lex, tok}...")
-    if lex == "=":  # предполагая, что оператор присваивания это '='
-        numRow += 1
-        return True
-    else:
-        failParse("Expected assign operator", (numLine, lex, tok))
-        return False
 
 def parseExpression():
     numLine, lex, tok = getSymb()
     print(f"Parsing Expression: {lex, tok}...")
-    if tok in ("intnum", "realnum", "ident") or lex in ("(", "-", "+"):
+    if tok in ("intnum", "realnum", "ident") or lex in ("(", "-", "+"):# Визначаємо тип виразу (арифметичний чи булевий) та аналізуємо його
         return parseArithmExpression()
     else:
         return parseBoolExpr()
@@ -256,20 +249,19 @@ def parseFactor():
     global numRow
     numLine, lex, tok = getSymb()
     print(f"Parsing Factor: {lex, tok}...")
-    if tok == "ident":
-        parseIdent()
-    elif tok in ("intnum", "realnum"):
-        parseArithmConst()
-    elif lex == "(":
-        numRow += 1
-        parseArithmExpression()
-        if not parseToken(")", "bracket"):
-            failParse("Expected closing bracket in line", ( numLine))
+    if tok == "ident": # Перевіряємо, чи є поточний символ ідентифікатором
+        parseIdent() # Аналізуємо ідентифікатор
+    elif tok in ("intnum", "realnum"):# Перевіряємо, чи є поточний символ числовою константою (ціле або дійсне число)
+        parseArithmConst()# Аналізуємо числову константу
+    elif lex == "(":# Перевіряємо, чи є поточний символ відкриваючою дужкою
+        numRow += 1# Переходимо до наступного символу
+        parseArithmExpression()# Аналізуємо арифметичний вираз всередині дужок
+        if not parseToken(")", "bracket","Expected closing bracket ')'"): # Перевіряємо, чи є наступний символ закриваючою дужкою
             return False
         return True
-    else:
-        failParse('невідповідність у Expression.Factor',
-                  (numLine, lex, tok, ' int, double, ident або \'(\' Expression \')\''))
+    else: # Якщо поточний символ не відповідає жодному з вищезазначених варіантів
+        failParse('невідповідність у Expression.Factor ' 'Expected int, double, ident або \'(\' Expression \')\'',
+                  (numLine, lex, tok ), error_code=7)
     return True
 
 def parseArithmConst():
@@ -280,53 +272,53 @@ def parseArithmConst():
         numRow += 1
         return True
     else:
-        failParse("Expected arithmetic constant", (numLine, lex, tok))
+        failParse("Expected arithmetic constant", (numLine, lex, tok), error_code=8)
         return False
 
 def parseSign(optional=False):
     global numRow
     numLine, lex, tok = getSymb()
     print(f"Parsing Sign: {lex, tok}...")
-    if lex in ("+", "-"):
+    if  lex == "-":
         numRow += 1
         return True
-    elif optional:
+    elif optional: # Якщо знак є необов'язковим і його немає, повертаємо False
         return False
-    else:
-        failParse("Expected sign", (numLine, lex, tok))
+    else:# Якщо знак відсутній, виводимо помилку
+        failParse("Expected sign", (numLine, lex, tok), error_code=9)
         return False
 
 def parseRelOp():
     global numRow
     numLine, lex, tok = getSymb()
     print(f"Parsing Relational Operator: {lex, tok}...")
-    if lex in ("<", ">", "<=", ">=", "==", "!="):
+    if tok == "rel_op":
         numRow += 1
         return True
     else:
-        failParse("Expected relational operator", (numLine, lex, tok))
+        failParse("Expected relational operator", (numLine, lex, tok), error_code=10)
         return False
 
 def parseAddOp():
     global numRow
     numLine, lex, tok = getSymb()
     print(f"Parsing Additive Operator: {lex, tok}...")
-    if lex in ("+", "-"):
+    if tok == "add_op":
         numRow += 1
         return True
     else:
-        failParse("Expected additive operator", (numLine, lex, tok))
+        failParse("Expected additive operator", (numLine, lex, tok), error_code=10)
         return False
 
 def parseMultOp():
     global numRow
     numLine, lex, tok = getSymb()
     print(f"Parsing Multiplicative Operator: {lex, tok}...")
-    if lex in ("*", "/"):
+    if tok == "mult_op":
         numRow += 1
         return True
     else:
-        failParse("Expected multiplicative operator", (numLine, lex, tok))
+        failParse("Expected multiplicative operator", (numLine, lex, tok), error_code=10)
         return False
 
 def parsePowerOp():
@@ -337,20 +329,20 @@ def parsePowerOp():
         numRow += 1
         return True
     else:
-        failParse("Expected power operator", (numLine, lex, tok))
+        failParse("Expected power operator", (numLine, lex, tok), error_code=10)
         return False
 
 #---------------------------------------------
 def parseOut():
     print("Parsing Out Statement...")
     parseToken('println', "keyword")
-    parseToken('(', 'bracket')
+    parseToken('(', 'bracket', "Expected opening bracket '(' after 'println'")
     numLine, lex, tok = getSymb()
     if tok == 'text':
         parseText()
     else:
         parseExpression()
-    parseToken(')', 'bracket')
+    parseToken(')', 'bracket', "Expected closing bracket ')'")
     return True
 
 def parseText():
@@ -361,7 +353,7 @@ def parseText():
         numRow += 1
         return True
     else:
-        failParse("Expected text", (numLine, lex, tok))
+        failParse("Expected text", (numLine, lex, tok), error_code=11)
         return False
 
 #----------------------------------
@@ -392,14 +384,14 @@ def parseForStatement():
 def parseInit():
     print("Parsing Init...")
     parseIdent()
-    parseAssignOp()
+    parseToken('=', 'assign_op', "Expected assignment operator '=' after identifier")  # Парсинг оператора присваивания
     parseArithmExpression()
     return True
 
 def parseUpdate():
     print("Parsing Update...")
     parseIdent()
-    parseAssignOp()
+    parseToken('=', 'assign_op', "Expected assignment operator '=' after identifier")  # Парсинг оператора присваивания
     parseArithmExpression()
     return True
 #---------------------------------------------
@@ -484,7 +476,7 @@ def parseCaseStatement():
     print("Parsing Case Statement...")
     parseToken('case', "keyword")
     parseExpression()
-    parseToken(':', 'punct')
+    parseToken(':', 'punct', "Expected ':'")
     while True:
         numLine, lex, tok = getSymb()
         if lex in ['case', 'default', '}']:
@@ -496,7 +488,7 @@ def parseCaseStatement():
 def parseDefaultCase():
     print("Parsing Default Case...")
     parseToken('default', "keyword")
-    parseToken(':', 'punct')
+    parseToken(':', 'punct', "Expected ':'")
     parseStatementList()
     return True
 
